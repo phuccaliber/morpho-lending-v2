@@ -1,0 +1,16 @@
+forge-std/=lib/forge-std/src/
+@morpho-blue/=lib/metamorpho-v1.1/lib/morpho-blue/src/
+@morpho-blue-oracles/=lib/morpho-blue-oracles/src/
+@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
+ds-test/=lib/morpho-blue-oracles/lib/forge-std/lib/ds-test/src/
+erc4626-tests/=lib/metamorpho-v1.1/lib/erc4626-tests/
+eth-gas-reporter/=node_modules/eth-gas-reporter/
+halmos-cheatcodes/=lib/openzeppelin-contracts/lib/halmos-cheatcodes/src/
+hardhat/=node_modules/hardhat/
+metamorpho-v1.1/=lib/metamorpho-v1.1/
+morpho-blue-irm/=lib/metamorpho-v1.1/lib/morpho-blue-irm/src/
+morpho-blue-oracles/=lib/morpho-blue-oracles/src/
+morpho-blue/=lib/metamorpho-v1.1/lib/morpho-blue/
+openzeppelin-contracts/=lib/openzeppelin-contracts/
+solmate/=lib/metamorpho-v1.1/lib/morpho-blue-irm/lib/solmate/src/
+@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/
