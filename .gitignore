@@ -54,3 +54,5 @@ ignition/deployments/chain-31337
 .vscode
 out
 cache_forge
+broadcast
+deployments

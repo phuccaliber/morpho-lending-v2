@@ -27,6 +27,7 @@
     "prettier-plugin-solidity": "2.1.0"
   },
   "scripts": {
-    "prettier": "prettier . --write **/*.sol **/**/*.sol"
+    "prettier": "prettier . --write **/*.sol **/**/*.sol",
+    "test:local": "bash test/test_local.sh"
   }
 }
