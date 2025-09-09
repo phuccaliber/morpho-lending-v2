@@ -51,6 +51,7 @@ contract BaseTest is Test {
 
         MORPHO_MANAGEMENT = new MorphoManagement(
             IOptimexProtocol(address(OPTIMEX_PROTOCOL)),
+            address(MORPHO),
             "ethereum:MorphoManagement",
             "version 1"
         );

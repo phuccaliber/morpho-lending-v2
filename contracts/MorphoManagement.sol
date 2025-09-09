@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.28;
 
+import "@morpho-blue/interfaces/IMorpho.sol";
 import "./protocol/OptimexAdminGuard.sol";
 import "./protocol/OptimexDomain.sol";
 
@@ -34,9 +35,13 @@ contract MorphoManagement is OptimexAdminGuard, OptimexDomain {
 
     constructor(
         IOptimexProtocol initProtocol,
+        address morpho,
         string memory name,
         string memory version
-    ) OptimexAdminGuard(initProtocol) OptimexDomain(name, version) {}
+    ) OptimexAdminGuard(initProtocol) OptimexDomain(name, version) {
+        require(morpho != address(0), ErrorLib.ZeroAddress());
+        MORPHO = morpho;
+    }
 
     /**
         @notice Creates a new AccountPositionManager with address `apm`
@@ -48,7 +53,9 @@ contract MorphoManagement is OptimexAdminGuard, OptimexDomain {
     function createAPM(
         address apm,
         address authorizer,
-        address validator
+        address validator,
+        uint256 deadline,
+        bytes calldata morphoSetAuthSig
     ) external checkValidator(validator) {
         /// Ensure the following conditions are met:
         /// - Validator is valid by checking on the modifier
@@ -62,6 +69,23 @@ contract MorphoManagement is OptimexAdminGuard, OptimexDomain {
 
         apmValidators[apm] = validator;
         apmAuthorizers[apm] = authorizer;
+
+        /// Message to be signed by the apm, allows address(this) control the apm
+        Authorization memory authorization = Authorization({
+            authorizer: apm,
+            authorized: address(this),
+            isAuthorized: true,
+            nonce: 0,
+            deadline: deadline
+        });
+
+        Signature memory signature = Signature({
+            r: bytes32(morphoSetAuthSig[0:32]),
+            s: bytes32(morphoSetAuthSig[32:64]),
+            v: uint8(morphoSetAuthSig[64])
+        });
+
+        IMorpho(MORPHO).setAuthorizationWithSig(authorization, signature);
 
         emit APMCreated(apm, authorizer, validator);
     }

@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import "forge-std/Test.sol";
 import "forge-std/console2.sol";
 import "lib/openzeppelin-contracts/contracts/utils/cryptography/EIP712.sol";
+import "@morpho-blue/interfaces/IMorpho.sol";
 
 contract Utils is Test {
     bytes32 private constant _SET_AUTHORIZER_TYPEHASH =
@@ -38,6 +39,11 @@ contract Utils is Test {
 
     bytes32 private constant _FINALIZE_POSITION_TYPEHASH =
         keccak256("FinalizePosition(bytes32 positionId,address apm)");
+
+    bytes32 private constant _MORPHO_SET_AUTHORIZER_TYPEHASH =
+        keccak256(
+            "Authorization(address authorizer,address authorized,bool isAuthorized,uint256 nonce,uint256 deadline)"
+        );
 
     function _signSupply(
         uint256 privateKey,
@@ -504,6 +510,42 @@ contract Utils is Test {
             positionId,
             apm,
             morphoLiquidator
+        );
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);
+        return abi.encodePacked(r, s, v);
+    }
+
+    function _getMorphoSetAuthorizerTypedDataHash(
+        Authorization memory authorization,
+        address morpho
+    ) private view returns (bytes32) {
+        bytes32 DOMAIN_SEPARATOR = keccak256(
+            abi.encode(
+                keccak256(
+                    "EIP712Domain(uint256 chainId,address verifyingContract)"
+                ),
+                block.chainid,
+                morpho
+            )
+        );
+
+        bytes32 structHash = keccak256(
+            abi.encode(_MORPHO_SET_AUTHORIZER_TYPEHASH, authorization)
+        );
+        return
+            keccak256(
+                abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, structHash)
+            );
+    }
+
+    function _signMorphoSetAuthorizer(
+        uint256 privateKey,
+        Authorization memory authorization,
+        address morpho
+    ) internal view returns (bytes memory) {
+        bytes32 digest = _getMorphoSetAuthorizerTypedDataHash(
+            authorization,
+            morpho
         );
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);
         return abi.encodePacked(r, s, v);

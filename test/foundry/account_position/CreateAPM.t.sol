@@ -8,7 +8,7 @@ import "../BaseLocal.t.sol";
 import "../common/Utils.t.sol";
 import {ErrorLib} from "contracts/libraries/ErrorLib.sol";
 
-contract SupplyCollateralTest is BaseMainnetTest, BaseLocalTest, Utils {
+contract CreateAPMTest is BaseMainnetTest, BaseLocalTest, Utils {
     function setUp() public override(BaseMainnetTest, BaseLocalTest) {
         string memory profile = vm.envString("PROFILE");
         if (keccak256(bytes(profile)) == keccak256(bytes("mainnet"))) {
@@ -20,26 +20,75 @@ contract SupplyCollateralTest is BaseMainnetTest, BaseLocalTest, Utils {
         }
     }
 
-    function test_createAPMSuccess(address apm, address authorizer) public {
-        vm.assume(apm != address(0));
+    function test_createAPMSuccess(uint256 apmKey, address authorizer) public {
         vm.assume(authorizer != address(0));
+        vm.assume(apmKey != 0);
 
-        MORPHO_MANAGEMENT.createAPM(apm, authorizer, VALIDATOR);
+        uint256 privateKey = uint256(keccak256(abi.encodePacked(apmKey)));
+        address apm = vm.addr(privateKey);
+        uint256 deadline = block.timestamp + 1 hours;
+        Authorization memory authorization = Authorization({
+            authorizer: apm,
+            authorized: address(MORPHO_MANAGEMENT),
+            isAuthorized: true,
+            nonce: 0,
+            deadline: deadline
+        });
+        bytes memory signature = _signMorphoSetAuthorizer(
+            privateKey,
+            authorization,
+            address(MORPHO)
+        );
+        MORPHO_MANAGEMENT.createAPM(
+            apm,
+            authorizer,
+            VALIDATOR,
+            deadline,
+            signature
+        );
 
         assertEq(MORPHO_MANAGEMENT.apmValidators(apm), VALIDATOR);
         assertEq(MORPHO_MANAGEMENT.apmAuthorizers(apm), authorizer);
+        assertEq(MORPHO.isAuthorized(apm, address(MORPHO_MANAGEMENT)), true);
     }
 
     function test_createAPMFailureApmCreatedBefore(
-        address apm,
+        uint256 apmKey,
         address authorizer
     ) public {
-        vm.assume(apm != address(0));
+        vm.assume(apmKey != 0);
         vm.assume(authorizer != address(0));
 
-        MORPHO_MANAGEMENT.createAPM(apm, authorizer, VALIDATOR);
+        uint256 privateKey = uint256(keccak256(abi.encodePacked(apmKey)));
+        address apm = vm.addr(privateKey);
+        uint256 deadline = block.timestamp + 1 hours;
+        Authorization memory authorization = Authorization({
+            authorizer: apm,
+            authorized: address(MORPHO_MANAGEMENT),
+            isAuthorized: true,
+            nonce: 0,
+            deadline: deadline
+        });
+        bytes memory signature = _signMorphoSetAuthorizer(
+            privateKey,
+            authorization,
+            address(MORPHO)
+        );
+        MORPHO_MANAGEMENT.createAPM(
+            apm,
+            authorizer,
+            VALIDATOR,
+            deadline,
+            signature
+        );
 
         vm.expectRevert(abi.encodeWithSelector(ErrorLib.InvalidAPM.selector));
-        MORPHO_MANAGEMENT.createAPM(apm, authorizer, VALIDATOR);
+        MORPHO_MANAGEMENT.createAPM(
+            apm,
+            authorizer,
+            VALIDATOR,
+            block.timestamp + 1 hours,
+            ""
+        );
     }
 }
