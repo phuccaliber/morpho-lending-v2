@@ -6,7 +6,11 @@ import "../../lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 contract ERC20Mock is ERC20 {
     uint8 private _decimals;
 
-    constructor(string memory name, string memory symbol, uint8 tokenDecimals) ERC20(name, symbol) {
+    constructor(
+        string memory name,
+        string memory symbol,
+        uint8 tokenDecimals
+    ) ERC20(name, symbol) {
         _decimals = tokenDecimals;
     }
 

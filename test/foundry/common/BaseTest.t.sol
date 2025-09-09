@@ -11,6 +11,8 @@ import "lib/metamorpho-v1.1/lib/morpho-blue/src/interfaces/IMorpho.sol";
 import "contracts/tokens/OptimexBTC.sol";
 import "contracts/protocol/OptimexProtocol.sol";
 
+import "contracts/MorphoManagement.sol";
+
 contract BaseTest is Test {
     using MarketParamsLib for MarketParams;
 
@@ -24,6 +26,7 @@ contract BaseTest is Test {
     OptimexBTC internal BTC;
     address internal LOAN_TOKEN;
     OptimexProtocol internal OPTIMEX_PROTOCOL;
+    MorphoManagement internal MORPHO_MANAGEMENT;
 
     IMorpho internal MORPHO;
     address internal ORACLE;
@@ -46,6 +49,12 @@ contract BaseTest is Test {
         vm.startPrank(OWNER);
         BTC = new OptimexBTC(5e8, address(OPTIMEX_PROTOCOL));
 
+        MORPHO_MANAGEMENT = new MorphoManagement(
+            IOptimexProtocol(address(OPTIMEX_PROTOCOL)),
+            "ethereum:MorphoManagement",
+            "version 1"
+        );
+
         marketParams = MarketParams({
             loanToken: address(LOAN_TOKEN),
             collateralToken: address(BTC),
@@ -56,6 +65,11 @@ contract BaseTest is Test {
         MORPHO.createMarket(marketParams);
         id = marketParams.id();
         marketId = Id.unwrap(id);
+
+        OPTIMEX_PROTOCOL.grantRole(
+            keccak256("VALIDATOR_ROLE"),
+            address(VALIDATOR)
+        );
         vm.stopPrank();
 
         vm.startPrank(SUPPLIER);
