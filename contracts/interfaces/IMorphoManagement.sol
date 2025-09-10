@@ -4,6 +4,34 @@ import "@morpho-blue/libraries/MarketParamsLib.sol";
 pragma solidity ^0.8.20;
 
 interface IMorphoManagement {
+    event APMCreated(
+        address indexed apm,
+        address indexed authorizer,
+        address indexed validator
+    );
+
+    event Supplied(
+        address indexed apm,
+        bytes32 indexed marketId,
+        uint256 assets,
+        uint256 loanCounter
+    );
+
+    /**
+        @notice Event emitted when assets are borrowed from a position on Morpho
+        @param apm The unique address of the APM, specify the position on Morpho
+        @param marketId The unique identifier of the Morpho market
+        @param amount The amount of assets borrowed
+        @param recipient The address to receive the borrowed assets
+        @dev Related function: borrow()
+    */
+    event Borrowed(
+        address indexed apm,
+        bytes32 indexed marketId,
+        uint256 amount,
+        address recipient
+    );
+
     /**
         @notice Supply collateral to an apm'position on Morpho
         @dev Called by anyone, but requires valid signature from the authorizer

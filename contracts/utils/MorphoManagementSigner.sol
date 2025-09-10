@@ -19,6 +19,11 @@ contract MorphoManagementSigner is EIP712 {
     bytes32 private constant _SUPPLY_TYPEHASH =
         0x08ae5b019b96dfc6531fe4156aafc1cf288947578b56a9430efc623bbadc8e33;
 
+    /// @notice EIP-712 typehash for the borrow operation
+    /// @dev keccak256("Borrow(address apm,uint256 assets,address recipient,uint256 nonce,uint256 deadline)");
+    bytes32 private constant _BORROW_TYPEHASH =
+        0xda4b426f381fd2bc183e218eed1c34a6dd86c29a586381f9a768a14889422ebb;
+
     /// @notice EIP-712 typehash for verifying the APM generation
     /// @dev keccak256("APMGenerated(address apm,uint256 deadline)")
     bytes32 private constant _APM_GENERATED_TYPEHASH =
@@ -91,5 +96,41 @@ contract MorphoManagementSigner is EIP712 {
             )
         );
         isValid = signer == hash.recover(signature);
+    }
+
+    /**
+        @notice Verifies a signature for a borrow operation, signed by the authorizer
+        @dev Confirms that the authorizer has approved borrowing the specified assets
+        @param signer The expected signer address (should be the position's authorizer)
+        @param apm The unique address of the APM, specify the position on Morpho
+        @param assets The amount of assets to borrow
+        @param recipient The address to receive the borrowed assets
+        @param nonce The nonce used in the signature
+        @param deadline The signature deadline
+        @param signature The signature to verify
+        @return isValid true if the signature is signed by the authorizer, false otherwise
+    */
+    function _verifyBorrowSig(
+        address signer,
+        address apm,
+        uint256 assets,
+        address recipient,
+        uint256 nonce,
+        uint256 deadline,
+        bytes memory signature
+    ) internal view returns (bool isValid) {
+        bytes32 hash = _hashTypedDataV4(
+            keccak256(
+                abi.encode(
+                    _BORROW_TYPEHASH,
+                    apm,
+                    assets,
+                    recipient,
+                    nonce,
+                    deadline
+                )
+            )
+        );
+        isValid = hash.recover(signature) == signer;
     }
 }

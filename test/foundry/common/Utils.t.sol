@@ -20,7 +20,7 @@ contract Utils is Test {
 
     bytes32 private constant _BORROW_TYPEHASH =
         keccak256(
-            "Borrow(bytes32 positionId,uint256 assets,address recipient,uint256 nonce,uint256 deadline)"
+            "Borrow(address apm,uint256 assets,address recipient,uint256 nonce,uint256 deadline)"
         );
 
     bytes32 private constant _WITHDRAW_COLLATERAL_TYPEHASH =
@@ -191,15 +191,15 @@ contract Utils is Test {
     }
 
     function _getBorrowTypedDataHash(
-        address positionManager,
-        bytes32 positionId,
+        address apm,
         uint256 assets,
         address receiver,
         uint256 nonce,
-        uint256 deadline
+        uint256 deadline,
+        address morphoManagement
     ) private view returns (bytes32) {
         (, string memory name, string memory version, , , , ) = EIP712(
-            address(positionManager)
+            morphoManagement
         ).eip712Domain();
         bytes32 DOMAIN_SEPARATOR = keccak256(
             abi.encode(
@@ -209,20 +209,13 @@ contract Utils is Test {
                 keccak256(bytes(name)),
                 keccak256(bytes(version)),
                 block.chainid,
-                address(positionManager)
+                morphoManagement
             )
         );
 
         // Recreate _hashTypedDataV4 logic
         bytes32 structHash = keccak256(
-            abi.encode(
-                _BORROW_TYPEHASH,
-                positionId,
-                assets,
-                receiver,
-                nonce,
-                deadline
-            )
+            abi.encode(_BORROW_TYPEHASH, apm, assets, receiver, nonce, deadline)
         );
         return
             keccak256(
@@ -232,20 +225,20 @@ contract Utils is Test {
 
     function _signBorrow(
         uint256 privateKey,
-        address positionManager,
-        bytes32 positionId,
+        address apm,
         uint256 assets,
         address receiver,
         uint256 nonce,
-        uint256 deadline
+        uint256 deadline,
+        address morphoManagement
     ) internal view returns (bytes memory) {
         bytes32 digest = _getBorrowTypedDataHash(
-            positionManager,
-            positionId,
+            apm,
             assets,
             receiver,
             nonce,
-            deadline
+            deadline,
+            morphoManagement
         );
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);
         return abi.encodePacked(r, s, v);
