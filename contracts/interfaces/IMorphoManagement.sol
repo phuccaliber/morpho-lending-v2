@@ -63,6 +63,23 @@ interface IMorphoManagement {
     );
 
     /**
+        @notice Event emitted when collateral is forcibly withdrawn from a position on Morpho
+        @param operator The address performing the withdrawal
+        @param apm The unique address of the APM, specify the position on Morpho
+        @param marketId The unique identifier of the Morpho market
+        @param withdrawnAssets The amount of collateral withdrawn
+        @param surplus The left-over amount of loan tokens transferred to the AccountPositionManager
+        @dev Related function: forceClose()
+    */
+    event ForceClosed(
+        address indexed operator,
+        address indexed apm,
+        bytes32 indexed marketId,
+        uint256 withdrawnAssets,
+        uint256 surplus
+    );
+
+    /**
         @notice Emitted when Morpho calls the `onMorphoRepay` callback
         @param repaidAssets The amount of loan tokens repaid to Morpho
         @param data Additional data for the repayment callback: (sender, loanToken)
@@ -106,6 +123,24 @@ interface IMorphoManagement {
         uint256 deadline,
         MarketParams calldata marketParams,
         bytes calldata signature
+    ) external;
+
+    /**
+        @notice Forcibly withdraw collateral and close a position on Morpho
+        @dev Called by the MorphoLiquidator contract only
+        @dev The position can be force-closed even when:
+          - The lending protocol is currently being paused by the Admin
+          - The position's permission state is EXIT_ONLY or REPAY_WITHDRAW
+        @param apm The unique address of the APM, specify the position on Morpho
+        @param assets The collateral amount to withdraw
+        @param surplus The left-over amount that can be claimed later
+        @param marketParams The Morpho market parameters
+    */
+    function forceClose(
+        address apm,
+        uint256 assets,
+        uint256 surplus,
+        MarketParams calldata marketParams
     ) external;
 
     // /**
