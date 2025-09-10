@@ -33,6 +33,31 @@ interface IMorphoManagement {
     );
 
     /**
+        @notice Event emitted when assets are repaid to a position on Morpho
+        @param apm The unique address of the APM, specify the position on Morpho
+        @param marketId The unique identifier of the Morpho market
+        @param assetsRepaid The amount of assets repaid
+        @param sharesRepaid The amount of shares repaid
+        @param repayer The address repaying the assets
+        @dev Related function: repay()
+    */
+    event Repaid(
+        address indexed apm,
+        bytes32 indexed marketId,
+        uint256 assetsRepaid,
+        uint256 sharesRepaid,
+        address repayer
+    );
+
+    /**
+        @notice Emitted when Morpho calls the `onMorphoRepay` callback
+        @param repaidAssets The amount of loan tokens repaid to Morpho
+        @param data Additional data for the repayment callback: (sender, loanToken)
+        @dev Related function: `onMorphoRepay`
+    */
+    event OnMorphoRepay(uint256 repaidAssets, bytes data);
+
+    /**
         @notice Supply collateral to an apm'position on Morpho
         @dev Called by anyone, but requires valid signature from the authorizer
         @dev The position can be supplied collateral if and only if:
