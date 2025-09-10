@@ -2,6 +2,7 @@
 pragma solidity ^0.8.28;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 import "@morpho-blue/interfaces/IMorpho.sol";
 import "@morpho-blue/libraries/MarketParamsLib.sol";
 import "./protocol/OptimexAdminGuard.sol";
@@ -14,7 +15,8 @@ contract MorphoManagement is
     OptimexAdminGuard,
     OptimexDomain,
     MorphoManagementSigner,
-    IMorphoManagement
+    IMorphoManagement,
+    ReentrancyGuardTransient
 {
     using MarketParamsLib for MarketParams;
     using SafeERC20 for IERC20;
@@ -56,19 +58,6 @@ contract MorphoManagement is
     /// tracks the number of loan supply requests
     /// It is incremented when `supply` is called for a new loan request
     mapping(address => uint256) public loanCounters;
-
-    event APMCreated(
-        address indexed apm,
-        address indexed authorizer,
-        address indexed validator
-    );
-
-    event Supplied(
-        address indexed apm,
-        bytes32 indexed marketId,
-        uint256 assets,
-        uint256 loanCounter
-    );
 
     modifier checkValidator(address validator) {
         require(_isValidator(validator), ErrorLib.InvalidValidator(validator));
@@ -195,6 +184,56 @@ contract MorphoManagement is
         IMorpho(MORPHO).supplyCollateral(marketParams, assets, apm, "");
 
         emit Supplied(apm, marketId, assets, loanCounter);
+    }
+
+    /**
+        @notice Borrow assets from a position on Morpho
+        @dev Called by anyone, but requires valid signature from the authorizer
+        @dev The position can be borrowed assets if and only if:
+          - The lending protocol is not "paused"
+          - The position's permission state is FULL_ACCESS
+        @param apm The unique address of the APM, specify the position on Morpho
+        @param assets The amount of assets to borrow
+        @param recipient The address to receive the borrowed assets
+        @param deadline The timestamp after which the signature is no longer valid
+        @param marketParams The Morpho market parameters
+        @param signature The signature from the authorizer approving the borrow operation
+    */
+    function borrow(
+        address apm,
+        uint256 assets,
+        address recipient,
+        uint256 deadline,
+        MarketParams calldata marketParams,
+        bytes calldata signature
+    ) external nonReentrant {
+        bytes32 id = _validateMarketId(marketParams, apm);
+        address authorizer = apmAuthorizers[apm];
+        require(authorizer != address(0), ErrorLib.InvalidAPM());
+        require(block.timestamp <= deadline, ErrorLib.DeadlineExpired());
+
+        /// Verify the authorizer has approved to borrow assets
+        require(
+            _verifyBorrowSig(
+                authorizer,
+                apm,
+                assets,
+                recipient,
+                actionCounters[apm],
+                deadline,
+                signature
+            ),
+            ErrorLib.InvalidAuthorizerSig()
+        );
+
+        /// Increment the action counter to prevent replay attacks
+        actionCounters[apm]++;
+
+        /// @dev Invokes Morpho to borrow assets from the market
+        /// The assets will be sent directly to `recipient`
+        IMorpho(MORPHO).borrow(marketParams, assets, 0, apm, recipient);
+
+        emit Borrowed(apm, id, assets, recipient);
     }
 
     /**
