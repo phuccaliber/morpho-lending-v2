@@ -273,6 +273,64 @@ contract MorphoManagement is
     }
 
     /**
+        @notice Withdraw collateral from a position on Morpho
+        @dev Called by anyone, but requires valid signature from the authorizer
+        @dev The position's collateral can be withdrawn even when:
+          - The lending protocol is currently being paused by the Admin
+          - The position's permission state is EXIT_ONLY or REPAY_WITHDRAW
+        @param apm The unique address of the APM, specify the position on Morpho
+        @param assets The collateral amount to withdraw
+        @param deadline The withdrawal deadline
+        @param marketParams The Morpho market parameters
+        @param signature The signature from the authorizer approving the withdrawal operation
+    */
+    function withdraw(
+        address apm,
+        uint256 assets,
+        uint256 deadline,
+        MarketParams calldata marketParams,
+        bytes calldata signature
+    ) external nonReentrant {
+        bytes32 id = _validateMarketId(marketParams, apm);
+        require(block.timestamp <= deadline, ErrorLib.DeadlineExpired());
+        address authorizer = apmAuthorizers[apm];
+        require(authorizer != address(0), ErrorLib.InvalidAPM());
+
+        /// Verify the authorizer approves the withdrawal
+        require(
+            _verifyWithdrawSig(
+                authorizer,
+                apm,
+                assets,
+                actionCounters[apm],
+                deadline,
+                signature
+            ),
+            ErrorLib.InvalidAuthorizerSig()
+        );
+
+        /// Increment the action counter to prevent replay attacks
+        actionCounters[apm]++;
+
+        /// @dev We only support full withdrawals, so the requested amount
+        /// must match the total collateral balance.
+        /// The tokens are sent directly to the token issuer contract to reduce circulation.
+        /// An equivalent amount of BTC will be released via the Optimex Protocol.
+        uint256 collateral = IMorpho(MORPHO)
+            .position(Id.wrap(id), apm)
+            .collateral;
+        require(collateral == assets, ErrorLib.InvalidAmount());
+        IMorpho(MORPHO).withdrawCollateral(
+            marketParams,
+            assets,
+            apm,
+            address(marketParams.collateralToken)
+        );
+
+        emit Withdrawn(apm, id, assets);
+    }
+
+    /**
         @notice Queries the address set as the protocol fee receiver
         @return The address set as the protocol fee receiver
     */
