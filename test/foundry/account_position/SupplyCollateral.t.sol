@@ -58,8 +58,60 @@ contract SupplyCollateralTest is BaseMainnetTest, BaseLocalTest {
         assertEq(position.collateral, amount, "Collateral should be 1 BTC");
         address authorizer = MORPHO_MANAGEMENT.apmAuthorizers(APM);
         uint256 loanIndex = MORPHO_MANAGEMENT.loanCounters(APM);
+        assertEq(MORPHO_MANAGEMENT.apmMarkets(APM), marketId, "Market should be set");
         assertEq(authorizer, AUTHORIZER, "Authorizer should be set");
         assertEq(loanIndex, 1, "Loan nonce should be 1");
+    }
+
+    function test_SupplyCollateralFailureMarketMismatch() public {
+        vm.startPrank(VALIDATOR);
+        // 1 BTC
+        uint256 amount = 1e8;
+
+        uint256 currentNonce = MORPHO_MANAGEMENT.loanCounters(APM);
+
+        bytes memory supplySig = _signSupply(
+            AUTHORIZER_PRIVATE_KEY,
+            APM,
+            marketId,
+            amount,
+            currentNonce,
+            address(MORPHO_MANAGEMENT)
+        );
+
+        bytes memory validatorSig = _signValidatorSupply(
+            VALIDATOR_PRIVATE_KEY,
+            supplySig,
+            address(MORPHO_SUPPLIER)
+        );
+
+        MORPHO_SUPPLIER.supply(
+            APM,
+            AUTHORIZER,
+            amount,
+            marketParams,
+            supplySig,
+            validatorSig
+        );
+
+        currentNonce = MORPHO_MANAGEMENT.loanCounters(APM);
+        marketParams.oracle = makeAddr("ORACLE");
+        validatorSig = _signValidatorSupply(
+            VALIDATOR_PRIVATE_KEY,
+            "",
+            address(MORPHO_SUPPLIER)
+        );
+        vm.expectRevert(abi.encodeWithSelector(ErrorLib.MarketMismatch.selector, marketId, Id.unwrap(marketParams.id())));
+        MORPHO_SUPPLIER.supply(
+            APM,
+            AUTHORIZER,
+            amount,
+            marketParams,
+            "",
+            validatorSig
+        );
+
+
     }
 
     // function test_SupplyCollateralSuccess() public {

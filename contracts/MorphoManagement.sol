@@ -181,6 +181,7 @@ contract MorphoManagement is
             ErrorLib.InvalidAuthorizerSig()
         );
 
+        apmMarkets[apm] = marketId;
         loanCounters[apm] = loanCounter + 1;
 
         IERC20(marketParams.collateralToken).approve(address(MORPHO), assets);
@@ -238,7 +239,7 @@ contract MorphoManagement is
         if (marketId == bytes32(0)) {
             apmMarkets[apm] = id;
         } else {
-            require(id == marketId, ErrorLib.MarketMismatch(id, marketId));
+            require(id == marketId, ErrorLib.MarketMismatch(marketId, id));
         }
         return id;
     }
