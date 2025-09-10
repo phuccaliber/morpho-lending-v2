@@ -24,7 +24,9 @@ contract Utils is Test {
         );
 
     bytes32 private constant _WITHDRAW_COLLATERAL_TYPEHASH =
-        0xc1292228a21656cc765f9cb8115ff5fc34b2ba76387bc5ea56d9271c84efec36;
+        keccak256(
+            "WithdrawCollateral(address apm,uint256 assets,uint256 nonce,uint256 deadline)"
+        );
 
     bytes32 private constant _CLAIM_REFUND_TYPEHASH =
         keccak256(
@@ -245,14 +247,14 @@ contract Utils is Test {
     }
 
     function _getWithdrawCollateralTypedDataHash(
-        address positionManager,
-        bytes32 positionId,
+        address apm,
         uint256 assets,
         uint256 nonce,
-        uint256 deadline
+        uint256 deadline,
+        address morphoManagement
     ) private view returns (bytes32) {
         (, string memory name, string memory version, , , , ) = EIP712(
-            address(positionManager)
+            morphoManagement
         ).eip712Domain();
         bytes32 DOMAIN_SEPARATOR = keccak256(
             abi.encode(
@@ -262,13 +264,13 @@ contract Utils is Test {
                 keccak256(bytes(name)),
                 keccak256(bytes(version)),
                 block.chainid,
-                address(positionManager)
+                morphoManagement
             )
         );
         bytes32 structHash = keccak256(
             abi.encode(
                 _WITHDRAW_COLLATERAL_TYPEHASH,
-                positionId,
+                apm,
                 assets,
                 nonce,
                 deadline
@@ -282,18 +284,18 @@ contract Utils is Test {
 
     function _signWithdraw(
         uint256 privateKey,
-        address positionManager,
-        bytes32 positionId,
+        address apm,
         uint256 assets,
         uint256 nonce,
-        uint256 deadline
+        uint256 deadline,
+        address morphoManagement
     ) internal view returns (bytes memory) {
         bytes32 digest = _getWithdrawCollateralTypedDataHash(
-            positionManager,
-            positionId,
+            apm,
             assets,
             nonce,
-            deadline
+            deadline,
+            morphoManagement
         );
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);
         return abi.encodePacked(r, s, v);

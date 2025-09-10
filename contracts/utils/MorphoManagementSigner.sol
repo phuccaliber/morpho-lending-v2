@@ -27,7 +27,7 @@ contract MorphoManagementSigner is EIP712 {
     /// @notice EIP-712 typehash for the withdraw collateral operation
     /// @dev keccak256("WithdrawCollateral(address apm,uint256 assets,uint256 nonce,uint256 deadline)");
     bytes32 private constant _WITHDRAW_COLLATERAL_TYPEHASH =
-        0xc1292228a21656cc765f9cb8115ff5fc34b2ba76387bc5ea56d9271c84efec36;
+        0x0ab847d92cbc3ab01c5a721efd1585ef8baedd2dfd9a1292bf556ecf41432ad4;
 
     /// @notice EIP-712 typehash for verifying the APM generation
     /// @dev keccak256("APMGenerated(address apm,uint256 deadline)")
