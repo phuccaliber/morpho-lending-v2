@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 import "@morpho-blue/interfaces/IMorpho.sol";
 import "@morpho-blue/libraries/MarketParamsLib.sol";
+import "@morpho-blue/interfaces/IMorphoCallbacks.sol";
 import "./protocol/OptimexAdminGuard.sol";
 import "./protocol/OptimexDomain.sol";
 import "./utils/MorphoManagementSigner.sol";
@@ -16,6 +17,7 @@ contract MorphoManagement is
     OptimexDomain,
     MorphoManagementSigner,
     IMorphoManagement,
+    IMorphoRepayCallback,
     ReentrancyGuardTransient
 {
     using MarketParamsLib for MarketParams;
@@ -237,6 +239,40 @@ contract MorphoManagement is
     }
 
     /**
+        @notice Repay borrowed assets to a position on Morpho
+        @dev Called by anyone, but requires valid signature from the authorizer
+        @dev The position can be repaid assets even when:
+          - The lending protocol is currently being paused by the Admin
+          - The position's permission state is EXIT_ONLY or REPAY_WITHDRAW
+        @param apm The unique address of the APM, specify the position on Morpho
+        @param assets The amount to repay
+        @param shares The shares to repay
+        @param marketParams The Morpho market parameters
+    */
+    function repay(
+        address apm,
+        uint256 assets,
+        uint256 shares,
+        MarketParams calldata marketParams
+    ) external nonReentrant {
+        bytes32 marketId = _validateMarketId(marketParams, apm);
+
+        bytes memory data = abi.encode(
+            msg.sender,
+            address(marketParams.loanToken)
+        );
+        (uint256 assetsRepaid, uint256 sharesRepaid) = IMorpho(MORPHO).repay(
+            marketParams,
+            assets,
+            shares,
+            apm,
+            data
+        );
+
+        emit Repaid(apm, marketId, assetsRepaid, sharesRepaid, msg.sender);
+    }
+
+    /**
         @notice Queries the address set as the protocol fee receiver
         @return The address set as the protocol fee receiver
     */
@@ -257,6 +293,30 @@ contract MorphoManagement is
         morpho = MORPHO;
         oBTC = OBTC;
         validator = apmValidators[apm];
+    }
+
+    /**
+        @notice Callback function invoked by Morpho during repayment processing
+        @dev Called by Morpho only
+        @param assets The amount of loan token being repaid, calculated and provided by Morpho
+        @param data Encoded callback data containing sender address and loan token address
+    */
+    function onMorphoRepay(uint256 assets, bytes calldata data) external {
+        /// Ensure only MORPHO can call this function
+        require(msg.sender == MORPHO, ErrorLib.Unauthorized(msg.sender));
+
+        /// Data is encoded by this contract before invoking Morpho's repay function
+        (address payer, address loanToken) = abi.decode(
+            data,
+            (address, address)
+        );
+
+        /// Transfer loan tokens from payer to this contract,
+        /// and approve Morpho to spend them for repayment
+        IERC20(loanToken).safeTransferFrom(payer, address(this), assets);
+        IERC20(loanToken).approval(MORPHO, assets);
+
+        emit OnMorphoRepay(assets, data);
     }
 
     /**
