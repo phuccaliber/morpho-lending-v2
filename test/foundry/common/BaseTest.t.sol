@@ -12,8 +12,10 @@ import "contracts/tokens/OptimexBTC.sol";
 import "contracts/protocol/OptimexProtocol.sol";
 
 import "contracts/MorphoManagement.sol";
+import "contracts/MorphoSupplier.sol";
+import "./Utils.t.sol";
 
-contract BaseTest is Test {
+contract BaseTest is Test, Utils {
     using MarketParamsLib for MarketParams;
 
     uint256 public constant BORROWER_PRIVATE_KEY =
@@ -22,11 +24,13 @@ contract BaseTest is Test {
         uint256(keccak256("AUTHORIZER_KEY"));
     uint256 public constant VALIDATOR_PRIVATE_KEY =
         uint256(keccak256("MPC_KEY"));
+    uint256 internal constant APM_PRIVATE_KEY = uint256(keccak256("APM_KEY"));
 
     OptimexBTC internal BTC;
     address internal LOAN_TOKEN;
     OptimexProtocol internal OPTIMEX_PROTOCOL;
     MorphoManagement internal MORPHO_MANAGEMENT;
+    MorphoSupplier internal MORPHO_SUPPLIER;
 
     IMorpho internal MORPHO;
     address internal ORACLE;
@@ -41,6 +45,7 @@ contract BaseTest is Test {
     address internal BORROWER = vm.addr(BORROWER_PRIVATE_KEY);
     address internal VALIDATOR = vm.addr(VALIDATOR_PRIVATE_KEY);
     address internal AUTHORIZER = vm.addr(AUTHORIZER_PRIVATE_KEY);
+    address internal APM = vm.addr(APM_PRIVATE_KEY);
     address internal P_FEE_ADDRESS = makeAddr("P_FEE_ADDRESS");
     string internal constant BITCOIN_PUBKEY = "BITCOIN_PUBKEY";
     bytes32 internal constant POSITION_ID = keccak256("POSITION_ID");
@@ -52,7 +57,13 @@ contract BaseTest is Test {
         MORPHO_MANAGEMENT = new MorphoManagement(
             IOptimexProtocol(address(OPTIMEX_PROTOCOL)),
             address(MORPHO),
+            address(BTC),
             "ethereum:MorphoManagement",
+            "version 1"
+        );
+        MORPHO_SUPPLIER = new MorphoSupplier(
+            address(MORPHO_MANAGEMENT),
+            "ethereum:MorphoSupplier",
             "version 1"
         );
 
@@ -71,11 +82,45 @@ contract BaseTest is Test {
             keccak256("VALIDATOR_ROLE"),
             address(VALIDATOR)
         );
+        OPTIMEX_PROTOCOL.grantRole(
+            keccak256("OBTC_ALLOCATOR_ROLE"),
+            address(MORPHO_SUPPLIER)
+        );
+        OPTIMEX_PROTOCOL.grantRole(
+            keccak256("OBTC_RECIPIENT_CONTROLLER_ROLE"),
+            address(MORPHO_SUPPLIER)
+        );
         vm.stopPrank();
 
         vm.startPrank(SUPPLIER);
         IERC20(LOAN_TOKEN).approve(address(MORPHO), type(uint256).max);
         MORPHO.supply(marketParams, 1000000e6, 0, SUPPLIER, "");
+        vm.stopPrank();
+
+        vm.startPrank(AUTHORIZER);
+        uint256 deadline = block.timestamp + 1000;
+        Authorization memory authorization = Authorization({
+            authorizer: APM,
+            authorized: address(MORPHO_MANAGEMENT),
+            isAuthorized: true,
+            nonce: 0,
+            deadline: deadline
+        });
+
+        bytes memory signature = _signMorphoSetAuthorizer(
+            APM_PRIVATE_KEY,
+            authorization,
+            address(MORPHO)
+        );
+
+        MORPHO_MANAGEMENT.createAPM(
+            APM,
+            AUTHORIZER,
+            VALIDATOR,
+            deadline,
+            signature
+        );
+
         vm.stopPrank();
     }
 

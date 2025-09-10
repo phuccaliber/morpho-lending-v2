@@ -8,7 +8,7 @@ import "../BaseLocal.t.sol";
 import "../common/Utils.t.sol";
 import {ErrorLib} from "contracts/libraries/ErrorLib.sol";
 
-contract CreateAPMTest is BaseMainnetTest, BaseLocalTest, Utils {
+contract CreateAPMTest is BaseMainnetTest, BaseLocalTest {
     function setUp() public override(BaseMainnetTest, BaseLocalTest) {
         string memory profile = vm.envString("PROFILE");
         if (keccak256(bytes(profile)) == keccak256(bytes("mainnet"))) {

@@ -11,10 +11,12 @@ contract Utils is Test {
         0x8ffe98054fd6401af07e7471e50e6a855a3edb1246ede4d5d35e79a29167a7e8;
 
     bytes32 private constant _SUPPLY_TYPEHASH =
-        0x84ab0c5bb221021e7bdc822d1a59f8c97e0a560365811e7ee025254a496bf9de;
+        keccak256(
+            "SupplyCollateral(address apm,bytes32 marketId,uint256 assets,uint256 nonce)"
+        );
 
     bytes32 private constant _VALIDATOR_SUPPLY_TYPEHASH =
-        0x7c598e158f51047a7e20707868c0cac036de69f4df3522bbabd94771f8324f9a;
+        keccak256("ValidatorSupply(bytes32 supplyCollateralSig)");
 
     bytes32 private constant _BORROW_TYPEHASH =
         keccak256(
@@ -47,18 +49,18 @@ contract Utils is Test {
 
     function _signSupply(
         uint256 privateKey,
-        address positionManager,
-        bytes32 positionId,
+        address apm,
         bytes32 id,
         uint256 assets,
-        uint256 nonce
+        uint256 nonce,
+        address morphoManagement
     ) internal view returns (bytes memory) {
         bytes32 digest = _getSupplyTypedDataHash(
-            positionManager,
-            positionId,
+            apm,
             id,
             assets,
-            nonce
+            nonce,
+            morphoManagement
         );
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);
         return abi.encodePacked(r, s, v);
@@ -83,14 +85,10 @@ contract Utils is Test {
 
     function _signValidatorSupply(
         uint256 privateKey,
-        address positionManager,
-        bytes memory authSetAuthorizerSignature,
         bytes memory supplyCollateralSignature,
         address optimexSupplier
     ) internal view returns (bytes memory) {
         bytes32 digest = _getValidatorSupplyTypedDataHash(
-            positionManager,
-            authSetAuthorizerSignature,
             supplyCollateralSignature,
             optimexSupplier
         );
@@ -99,14 +97,14 @@ contract Utils is Test {
     }
 
     function _getSupplyTypedDataHash(
-        address positionManager,
-        bytes32 positionId,
+        address apm,
         bytes32 id,
         uint256 assets,
-        uint256 nonce
+        uint256 nonce,
+        address morphoManagement
     ) private view returns (bytes32) {
         (, string memory name, string memory version, , , , ) = EIP712(
-            address(positionManager)
+            morphoManagement
         ).eip712Domain();
         bytes32 DOMAIN_SEPARATOR = keccak256(
             abi.encode(
@@ -116,11 +114,11 @@ contract Utils is Test {
                 keccak256(bytes(name)),
                 keccak256(bytes(version)),
                 block.chainid,
-                address(positionManager)
+                morphoManagement
             )
         );
         bytes32 structHash = keccak256(
-            abi.encode(_SUPPLY_TYPEHASH, positionId, id, assets, nonce)
+            abi.encode(_SUPPLY_TYPEHASH, apm, id, assets, nonce)
         );
         return
             keccak256(
@@ -160,8 +158,6 @@ contract Utils is Test {
     }
 
     function _getValidatorSupplyTypedDataHash(
-        address positionManager,
-        bytes memory authSetAuthorizerSignature,
         bytes memory supplyCollateralSignature,
         address optimexSupplier
     ) private view returns (bytes32) {
@@ -182,8 +178,6 @@ contract Utils is Test {
         bytes32 structHash = keccak256(
             abi.encode(
                 _VALIDATOR_SUPPLY_TYPEHASH,
-                positionManager,
-                keccak256(authSetAuthorizerSignature),
                 keccak256(supplyCollateralSignature)
             )
         );
