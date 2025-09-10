@@ -19,6 +19,11 @@ contract MorphoManagementSigner is EIP712 {
     bytes32 private constant _SUPPLY_TYPEHASH =
         0x08ae5b019b96dfc6531fe4156aafc1cf288947578b56a9430efc623bbadc8e33;
 
+    /// @notice EIP-712 typehash for verifying the APM generation
+    /// @dev keccak256("APMGenerated(address apm,uint256 deadline)")
+    bytes32 private constant _APM_GENERATED_TYPEHASH =
+        0xb2ed236e73990dd0bd6e7536cdd27e9f18b33c0f4fbc9e3d00dc42602de9177d;
+
     constructor(
         string memory name,
         string memory version
@@ -53,6 +58,24 @@ contract MorphoManagementSigner is EIP712 {
     //     );
     //     signer = hash.recover(signature);
     // }
+
+    /**
+        @notice Recovers the signer address that signed the APM generation
+        @param apm The address of the AccountPositionManager
+        @param deadline The timestamp after which the signature expires
+        @param signature The EIP-712 signature
+        @return signer The recovered signer address
+    */
+    function _getDelegatorSigner(
+        address apm,
+        uint256 deadline,
+        bytes memory signature
+    ) internal view returns (address signer) {
+        bytes32 hash = _hashTypedDataV4(
+            keccak256(abi.encode(_APM_GENERATED_TYPEHASH, apm, deadline))
+        );
+        signer = hash.recover(signature);
+    }
 
     function _verifySupplySig(
         address signer,
