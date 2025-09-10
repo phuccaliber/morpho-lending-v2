@@ -24,6 +24,11 @@ contract MorphoManagementSigner is EIP712 {
     bytes32 private constant _BORROW_TYPEHASH =
         0xda4b426f381fd2bc183e218eed1c34a6dd86c29a586381f9a768a14889422ebb;
 
+    /// @notice EIP-712 typehash for the withdraw collateral operation
+    /// @dev keccak256("WithdrawCollateral(address apm,uint256 assets,uint256 nonce,uint256 deadline)");
+    bytes32 private constant _WITHDRAW_COLLATERAL_TYPEHASH =
+        0x0ab847d92cbc3ab01c5a721efd1585ef8baedd2dfd9a1292bf556ecf41432ad4;
+
     /// @notice EIP-712 typehash for verifying the APM generation
     /// @dev keccak256("APMGenerated(address apm,uint256 deadline)")
     bytes32 private constant _APM_GENERATED_TYPEHASH =
@@ -126,6 +131,39 @@ contract MorphoManagementSigner is EIP712 {
                     apm,
                     assets,
                     recipient,
+                    nonce,
+                    deadline
+                )
+            )
+        );
+        isValid = hash.recover(signature) == signer;
+    }
+
+    /**
+        @notice Verifies a signature for a withdraw operation, signed by the authorizer
+        @dev Confirms that the authorizer has approved withdrawing the specified assets
+        @param signer The expected signer address (should be the position's authorizer)
+        @param apm The unique address of the APM, specify the position on Morpho
+        @param assets The amount of collateral to withdraw
+        @param nonce The nonce used in the signature
+        @param deadline The signature deadline
+        @param signature The signature to verify
+        @return isValid true if the signature is signed by the authorizer, false otherwise
+    */
+    function _verifyWithdrawSig(
+        address signer,
+        address apm,
+        uint256 assets,
+        uint256 nonce,
+        uint256 deadline,
+        bytes memory signature
+    ) internal view returns (bool isValid) {
+        bytes32 hash = _hashTypedDataV4(
+            keccak256(
+                abi.encode(
+                    _WITHDRAW_COLLATERAL_TYPEHASH,
+                    apm,
+                    assets,
                     nonce,
                     deadline
                 )

@@ -50,6 +50,19 @@ interface IMorphoManagement {
     );
 
     /**
+        @notice Event emitted when collateral is withdrawn from a position on Morpho
+        @param apm The unique address of the APM, specify the position on Morpho
+        @param marketId The unique identifier of the Morpho market
+        @param amount The amount of collateral withdrawn
+        @dev Related function: withdraw()
+    */
+    event Withdrawn(
+        address indexed apm,
+        bytes32 indexed marketId,
+        uint256 amount
+    );
+
+    /**
         @notice Emitted when Morpho calls the `onMorphoRepay` callback
         @param repaidAssets The amount of loan tokens repaid to Morpho
         @param data Additional data for the repayment callback: (sender, loanToken)
@@ -73,6 +86,26 @@ interface IMorphoManagement {
         uint256 assets,
         MarketParams calldata marketParams,
         bytes calldata sig
+    ) external;
+
+    /**
+        @notice Withdraw collateral from a position on Morpho
+        @dev Called by anyone, but requires valid signature from the authorizer
+        @dev The position's collateral can be withdrawn even when:
+          - The lending protocol is currently being paused by the Admin
+          - The position's permission state is EXIT_ONLY or REPAY_WITHDRAW
+        @param apm The unique address of the APM, specify the position on Morpho
+        @param assets The collateral amount to withdraw
+        @param deadline The withdrawal deadline
+        @param marketParams The Morpho market parameters
+        @param signature The signature from the authorizer approving the withdrawal operation
+    */
+    function withdraw(
+        address apm,
+        uint256 assets,
+        uint256 deadline,
+        MarketParams calldata marketParams,
+        bytes calldata signature
     ) external;
 
     // /**
