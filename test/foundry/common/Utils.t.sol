@@ -4,16 +4,19 @@ pragma solidity ^0.8.20;
 import "forge-std/Test.sol";
 import "forge-std/console2.sol";
 import "lib/openzeppelin-contracts/contracts/utils/cryptography/EIP712.sol";
+import "@morpho-blue/interfaces/IMorpho.sol";
 
 contract Utils is Test {
     bytes32 private constant _SET_AUTHORIZER_TYPEHASH =
         0x8ffe98054fd6401af07e7471e50e6a855a3edb1246ede4d5d35e79a29167a7e8;
 
     bytes32 private constant _SUPPLY_TYPEHASH =
-        0x84ab0c5bb221021e7bdc822d1a59f8c97e0a560365811e7ee025254a496bf9de;
+        keccak256(
+            "SupplyCollateral(address apm,bytes32 marketId,uint256 assets,uint256 nonce)"
+        );
 
     bytes32 private constant _VALIDATOR_SUPPLY_TYPEHASH =
-        0x7c598e158f51047a7e20707868c0cac036de69f4df3522bbabd94771f8324f9a;
+        keccak256("ValidatorSupply(bytes32 supplyCollateralSig)");
 
     bytes32 private constant _BORROW_TYPEHASH =
         keccak256(
@@ -39,20 +42,25 @@ contract Utils is Test {
     bytes32 private constant _FINALIZE_POSITION_TYPEHASH =
         keccak256("FinalizePosition(bytes32 positionId,address apm)");
 
+    bytes32 private constant _MORPHO_SET_AUTHORIZER_TYPEHASH =
+        keccak256(
+            "Authorization(address authorizer,address authorized,bool isAuthorized,uint256 nonce,uint256 deadline)"
+        );
+
     function _signSupply(
         uint256 privateKey,
-        address positionManager,
-        bytes32 positionId,
+        address apm,
         bytes32 id,
         uint256 assets,
-        uint256 nonce
+        uint256 nonce,
+        address morphoManagement
     ) internal view returns (bytes memory) {
         bytes32 digest = _getSupplyTypedDataHash(
-            positionManager,
-            positionId,
+            apm,
             id,
             assets,
-            nonce
+            nonce,
+            morphoManagement
         );
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);
         return abi.encodePacked(r, s, v);
@@ -77,14 +85,10 @@ contract Utils is Test {
 
     function _signValidatorSupply(
         uint256 privateKey,
-        address positionManager,
-        bytes memory authSetAuthorizerSignature,
         bytes memory supplyCollateralSignature,
         address optimexSupplier
     ) internal view returns (bytes memory) {
         bytes32 digest = _getValidatorSupplyTypedDataHash(
-            positionManager,
-            authSetAuthorizerSignature,
             supplyCollateralSignature,
             optimexSupplier
         );
@@ -93,14 +97,14 @@ contract Utils is Test {
     }
 
     function _getSupplyTypedDataHash(
-        address positionManager,
-        bytes32 positionId,
+        address apm,
         bytes32 id,
         uint256 assets,
-        uint256 nonce
+        uint256 nonce,
+        address morphoManagement
     ) private view returns (bytes32) {
         (, string memory name, string memory version, , , , ) = EIP712(
-            address(positionManager)
+            morphoManagement
         ).eip712Domain();
         bytes32 DOMAIN_SEPARATOR = keccak256(
             abi.encode(
@@ -110,11 +114,11 @@ contract Utils is Test {
                 keccak256(bytes(name)),
                 keccak256(bytes(version)),
                 block.chainid,
-                address(positionManager)
+                morphoManagement
             )
         );
         bytes32 structHash = keccak256(
-            abi.encode(_SUPPLY_TYPEHASH, positionId, id, assets, nonce)
+            abi.encode(_SUPPLY_TYPEHASH, apm, id, assets, nonce)
         );
         return
             keccak256(
@@ -154,8 +158,6 @@ contract Utils is Test {
     }
 
     function _getValidatorSupplyTypedDataHash(
-        address positionManager,
-        bytes memory authSetAuthorizerSignature,
         bytes memory supplyCollateralSignature,
         address optimexSupplier
     ) private view returns (bytes32) {
@@ -176,8 +178,6 @@ contract Utils is Test {
         bytes32 structHash = keccak256(
             abi.encode(
                 _VALIDATOR_SUPPLY_TYPEHASH,
-                positionManager,
-                keccak256(authSetAuthorizerSignature),
                 keccak256(supplyCollateralSignature)
             )
         );
@@ -504,6 +504,42 @@ contract Utils is Test {
             positionId,
             apm,
             morphoLiquidator
+        );
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);
+        return abi.encodePacked(r, s, v);
+    }
+
+    function _getMorphoSetAuthorizerTypedDataHash(
+        Authorization memory authorization,
+        address morpho
+    ) private view returns (bytes32) {
+        bytes32 DOMAIN_SEPARATOR = keccak256(
+            abi.encode(
+                keccak256(
+                    "EIP712Domain(uint256 chainId,address verifyingContract)"
+                ),
+                block.chainid,
+                morpho
+            )
+        );
+
+        bytes32 structHash = keccak256(
+            abi.encode(_MORPHO_SET_AUTHORIZER_TYPEHASH, authorization)
+        );
+        return
+            keccak256(
+                abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, structHash)
+            );
+    }
+
+    function _signMorphoSetAuthorizer(
+        uint256 privateKey,
+        Authorization memory authorization,
+        address morpho
+    ) internal view returns (bytes memory) {
+        bytes32 digest = _getMorphoSetAuthorizerTypedDataHash(
+            authorization,
+            morpho
         );
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);
         return abi.encodePacked(r, s, v);

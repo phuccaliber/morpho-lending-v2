@@ -1,0 +1,72 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.28;
+
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
+
+/// @title MorphoManagementSigner
+/// @notice Provides signature verification utilities for MorphoManagement operations
+contract MorphoManagementSigner is EIP712 {
+    using ECDSA for bytes32;
+
+    /// @notice EIP-712 typehash for setting the permission state of a position
+    /// @dev keccak256("RestrictPosition(address apm,bytes32 positionId,uint8 state,uint64 deadline)")
+    bytes32 private constant _RESTRICT_POSITION_TYPEHASH =
+        0x7422df70bffc02124c5e0bbb0185d9e617c274e2067c6b6de08a650a2fab174a;
+
+    /// @notice EIP-712 typehash for supplying collateral to an apm
+    /// @dev keccak256("SupplyCollateral(address apm,bytes32 marketId,uint256 assets,uint256 nonce)")
+    bytes32 private constant _SUPPLY_TYPEHASH =
+        0x08ae5b019b96dfc6531fe4156aafc1cf288947578b56a9430efc623bbadc8e33;
+
+    constructor(
+        string memory name,
+        string memory version
+    ) EIP712(name, version) {}
+
+    // /**
+    //     @notice Recovers the signer address that signed the permission state change operation
+    //     @param apm The address of the AccountPositionManager
+    //     @param positionId The unique identifier of the Optimex position
+    //     @param state The permission state to set
+    //     @param deadline The timestamp after which the signature expires
+    //     @param signature The EIP-712 signature
+    //     @return signer The recovered signer address
+    // */
+    // function _getSigner(
+    //     address apm,
+    //     bytes32 positionId,
+    //     Permission state,
+    //     uint64 deadline,
+    //     bytes memory signature
+    // ) internal view returns (address signer) {
+    //     bytes32 hash = _hashTypedDataV4(
+    //         keccak256(
+    //             abi.encode(
+    //                 _RESTRICT_POSITION_TYPEHASH,
+    //                 apm,
+    //                 positionId,
+    //                 state,
+    //                 deadline
+    //             )
+    //         )
+    //     );
+    //     signer = hash.recover(signature);
+    // }
+
+    function _verifySupplySig(
+        address signer,
+        address apm,
+        bytes32 marketId,
+        uint256 assets,
+        uint256 nonce,
+        bytes calldata signature
+    ) internal view returns (bool isValid) {
+        bytes32 hash = _hashTypedDataV4(
+            keccak256(
+                abi.encode(_SUPPLY_TYPEHASH, apm, marketId, assets, nonce)
+            )
+        );
+        isValid = signer == hash.recover(signature);
+    }
+}

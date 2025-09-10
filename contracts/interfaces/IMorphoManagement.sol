@@ -1,0 +1,86 @@
+import "@morpho-blue/libraries/MarketParamsLib.sol";
+
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.20;
+
+interface IMorphoManagement {
+    /**
+        @notice Supply collateral to an apm'position on Morpho
+        @dev Called by anyone, but requires valid signature from the authorizer
+        @dev The position can be supplied collateral if and only if:
+          - The lending protocol is not "paused"
+          - The position's permission state is FULL_ACCESS
+        @param apm The unique address of the APM, specify the position on Morpho
+        @param assets The amount of assets to supply
+        @param marketParams The Morpho market parameters
+        @param sig Signature from authorizer approving the collateral supply
+    */
+    function supply(
+        address apm,
+        uint256 assets,
+        MarketParams calldata marketParams,
+        bytes calldata sig
+    ) external;
+
+    // /**
+    //     @notice Queries the current status of the MorphoManagement contract
+    //     @return isPaused Boolean flag to indicate if the lending protocol is paused
+    // */
+    // function paused() external view returns (bool isPaused);
+
+    /**
+        @notice Queries the address of the Morpho contract
+        @return The address of the Morpho contract
+    */
+    function MORPHO() external view returns (address);
+
+    /**
+        @notice Queries the address of the OptimexBTC token
+        @return The address of the OptimexBTC token
+    */
+    function OBTC() external view returns (address);
+
+    /**
+        @notice Queries the validator of a specified `apm`
+        @param apm The user's AccountPositionManager to query
+        @return validator The validator address assigned to this `apm`
+    */
+    function apmValidators(
+        address apm
+    ) external view returns (address validator);
+
+    /**
+        @notice Checks if the provided `account` has been granted the `role`
+        @param role The role to check
+        @param account The address to check
+        @return True if the address has been granted the role, false otherwise
+    */
+    function isAuthorized(
+        bytes32 role,
+        address account
+    ) external view returns (bool);
+
+    // /**
+    //     @notice Checks the validity of the provided `apm`
+    //     @param apm The address to check for validity
+    //     @dev Reverts if the provided address is not a valid AccountPositionManager
+    // */
+    // function validateAPM(address apm) external view;
+
+    /**
+        @notice Queries the address set as the protocol fee receiver
+        @return The address configured as the protocol fee receiver
+    */
+    function getPFeeAddress() external view returns (address);
+
+    /**
+        @notice Queries the configurations for a specified `apm`
+        @param apm The user's AccountPositionManager to query
+        @return morpho The address of the Morpho contract
+        @return oBTC The address of the OptimexBTC token
+        @return validator The validator address assigned to this `apm`
+    */
+    function getAPMConfigurations(
+        address apm
+    ) external view returns (address morpho, address oBTC, address validator);
+}

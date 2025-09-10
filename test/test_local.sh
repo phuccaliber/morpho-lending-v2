@@ -46,7 +46,7 @@ export PROFILE=local
 echo -e "${GREEN}Running tests...${NC}"
 # Run the tests using the forked network
 # forge test --rpc-url http://localhost:8545 --mc LocalSupplyCollateralTest -vvvv
-# forge test --rpc-url http://localhost:8545 --mp 'test/foundry/*/*.t.sol' -vvvv
+forge test --rpc-url http://localhost:8545 --mp 'test/foundry/*/*.t.sol' -vvvv
 
 # Check if tests were successful
 if [ $? -ne 0 ]; then

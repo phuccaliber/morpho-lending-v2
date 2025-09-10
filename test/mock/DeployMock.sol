@@ -34,9 +34,16 @@ contract DeployMock is Script {
         vm.stopBroadcast();
 
         // Create JSON with deployment info
-        string memory json = vm.serializeAddress("", "address", address(morpho));
+        string memory json = vm.serializeAddress(
+            "",
+            "address",
+            address(morpho)
+        );
         json = vm.serializeAddress("", "owner", owner);
-        string memory path = string.concat(vm.projectRoot(), "/deployments/morpho.json");
+        string memory path = string.concat(
+            vm.projectRoot(),
+            "/deployments/morpho.json"
+        );
         vm.writeJson(json, path);
 
         console.log("Morpho deployed at:", address(morpho));
