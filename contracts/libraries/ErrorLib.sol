@@ -15,6 +15,7 @@ library ErrorLib {
     error InvalidPositionId(bytes32 positionId);
     error InvalidPubkey();
     error InvalidValidator(address validator);
+    error InvalidDelegator(address delegator);
     error MarketMismatch(bytes32 expected, bytes32 actual);
     error RecipientNotPermitted(address recipient);
     error StateAlreadySet();

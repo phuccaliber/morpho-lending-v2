@@ -23,6 +23,9 @@ contract MorphoManagement is
     /// keccak256("VALIDATOR_ROLE");
     bytes32 private constant _VALIDATOR_ROLE =
         0x21702c8af46127c7fa207f89d0b0a8441bb32959a0ac7df790e9ab1a25c98926;
+    /// keccak256("WALLET_DELEGATOR_ROLE");
+    bytes32 private constant _WALLET_DELEGATOR_ROLE =
+        0x98f541bbc60e0985b6b2060b59d90fe89e3caed07b79214afd8d7dbfbe5691ac;
 
     /// @dev The address of the Morpho contract
     address public immutable MORPHO;
@@ -98,14 +101,16 @@ contract MorphoManagement is
         @param validator The validator assigned to the AccountPositionManager
         @param deadline The deadline of the signature
         @param morphoSetAuthSig The signature signed by the apm key, performed by WalletDelegator
-        @dev `morphoSetAuthSig` ensures the APM is generated and used once by WalletDelegator
+        @param walletDelegatorSig The signature signed by the wallet delegator key,
+        @dev `walletDelegatorSig` ensures the APM is generated and used once by WalletDelegator
     */
     function createAPM(
         address apm,
         address authorizer,
         address validator,
         uint256 deadline,
-        bytes calldata morphoSetAuthSig
+        bytes calldata morphoSetAuthSig,
+        bytes calldata walletDelegatorSig
     ) external checkValidator(validator) {
         /// Ensure the following conditions are met:
         /// - Validator is valid by checking on the modifier
@@ -116,6 +121,8 @@ contract MorphoManagement is
             ErrorLib.ZeroAddress()
         );
         require(apmValidators[apm] == address(0), ErrorLib.InvalidAPM());
+        address signer = _getDelegatorSigner(apm, deadline, walletDelegatorSig);
+        require(_isDelegator(signer), ErrorLib.InvalidDelegator(signer));
 
         apmValidators[apm] = validator;
         apmAuthorizers[apm] = authorizer;
@@ -228,6 +235,10 @@ contract MorphoManagement is
 
     function _isValidator(address validator) private view returns (bool) {
         return _isAuthorized(_VALIDATOR_ROLE, validator);
+    }
+
+    function _isDelegator(address delegator) private view returns (bool) {
+        return _isAuthorized(_WALLET_DELEGATOR_ROLE, delegator);
     }
 
     function _validateMarketId(

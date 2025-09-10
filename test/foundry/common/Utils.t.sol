@@ -47,6 +47,9 @@ contract Utils is Test {
             "Authorization(address authorizer,address authorized,bool isAuthorized,uint256 nonce,uint256 deadline)"
         );
 
+    bytes32 private constant _APM_GENERATED_TYPEHASH =
+        keccak256("APMGenerated(address apm,uint256 deadline)");
+
     function _signSupply(
         uint256 privateKey,
         address apm,
@@ -540,6 +543,50 @@ contract Utils is Test {
         bytes32 digest = _getMorphoSetAuthorizerTypedDataHash(
             authorization,
             morpho
+        );
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);
+        return abi.encodePacked(r, s, v);
+    }
+
+    function _getAPMGeneratedTypedDataHash(
+        address apm,
+        uint256 deadline,
+        address morphoManagement
+    ) private view returns (bytes32) {
+        (, string memory name, string memory version, , , , ) = EIP712(
+            address(morphoManagement)
+        ).eip712Domain();
+        bytes32 DOMAIN_SEPARATOR = keccak256(
+            abi.encode(
+                keccak256(
+                    "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
+                ),
+                keccak256(bytes(name)),
+                keccak256(bytes(version)),
+                block.chainid,
+                address(morphoManagement)
+            )
+        );
+
+        bytes32 structHash = keccak256(
+            abi.encode(_APM_GENERATED_TYPEHASH, apm, deadline)
+        );
+        return
+            keccak256(
+                abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, structHash)
+            );
+    }
+
+    function _signAPMGenerated(
+        uint256 privateKey,
+        address apm,
+        uint256 deadline,
+        address morphoManagement
+    ) internal view returns (bytes memory) {
+        bytes32 digest = _getAPMGeneratedTypedDataHash(
+            apm,
+            deadline,
+            morphoManagement
         );
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);
         return abi.encodePacked(r, s, v);
