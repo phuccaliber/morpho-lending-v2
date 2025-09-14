@@ -10,7 +10,7 @@ contract MorphoLiquidatorSigner is EIP712 {
     using ECDSA for bytes32;
 
     /// @notice EIP-712 typehash for force close operations
-    /// @dev keccak256("ForceClose(bytes32 positionId,address apm,bytes32 tradeId)");
+    /// @dev keccak256("ForceClose(address apm,bytes32 tradeId)");
     bytes32 private constant _FORCE_CLOSE_TYPEHASH =
         0x00ec65eea1fc5f9b473965fcd39b70e1d70bb93223ba2fbb4c15e5758148c422;
 
