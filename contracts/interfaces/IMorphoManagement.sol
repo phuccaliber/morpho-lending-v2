@@ -171,6 +171,15 @@ interface IMorphoManagement {
     ) external view returns (address validator);
 
     /**
+        @notice Queries the marketId of a specified `apm`
+        @param apm The user's AccountPositionManager to query
+        @return marketId The marketId assigned to this `apm`
+    */
+    function apmMarkets(
+        address apm
+    ) external view returns (bytes32 marketId);
+
+    /**
         @notice Checks if the provided `account` has been granted the `role`
         @param role The role to check
         @param account The address to check

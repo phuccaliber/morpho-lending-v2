@@ -369,7 +369,7 @@ contract MorphoManagement is
             marketParams,
             assets,
             apm,
-            address(marketParams.collateralToken)
+            sender
         );
 
         /// User credit is updated if any amount remains after debt repayment
