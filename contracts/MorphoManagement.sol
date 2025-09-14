@@ -31,6 +31,10 @@ contract MorphoManagement is
     bytes32 private constant _WALLET_DELEGATOR_ROLE =
         0x98f541bbc60e0985b6b2060b59d90fe89e3caed07b79214afd8d7dbfbe5691ac;
 
+    /// keccak256("MORPHO_LIQUIDATOR_ROLE");
+    bytes32 private constant _MORPHO_LIQUIDATOR_ROLE =
+        0x8d711590108002b9213cc869b2031e136b963689adee0a363cdecb47bea125a0;
+
     /// @dev The address of the Morpho contract
     address public immutable MORPHO;
 
@@ -60,6 +64,10 @@ contract MorphoManagement is
     /// tracks the number of loan supply requests
     /// It is incremented when `supply` is called for a new loan request
     mapping(address => uint256) public loanCounters;
+
+    /// @dev Mapping that stores credited amount for each apm
+    /// This credit is set when a position is liquidated or force-closed
+    mapping(address => uint256) public credits;
 
     modifier checkValidator(address validator) {
         require(_isValidator(validator), ErrorLib.InvalidValidator(validator));
@@ -328,6 +336,55 @@ contract MorphoManagement is
         );
 
         emit Withdrawn(apm, id, assets);
+    }
+
+    /**
+        @notice Forcibly withdraw collateral and close a position on Morpho
+        @dev Called by the MorphoLiquidator contract only
+        @dev The position can be force-closed even when:
+          - The lending protocol is currently being paused by the Admin
+          - The position's permission state is EXIT_ONLY or REPAY_WITHDRAW
+        @param apm The unique address of the APM, specify the position on Morpho
+        @param assets The collateral amount to withdraw
+        @param surplus The left-over amount that can be claimed later
+        @param marketParams The Morpho market parameters
+    */
+    function forceClose(
+        address apm,
+        uint256 assets,
+        uint256 surplus,
+        MarketParams calldata marketParams
+    ) external nonReentrant {
+        address sender = msg.sender;
+        bytes32 id = _validateMarketId(marketParams, apm);
+        require(
+            _isAuthorized(_MORPHO_LIQUIDATOR_ROLE, sender),
+            ErrorLib.Unauthorized(sender)
+        );
+        require(assets > 0, ErrorLib.ZeroAmount());
+
+        /// Withdraw collateral from the Morpho market, and transfer the amount
+        /// to the MorphoLiquidator contract for further processing
+        IMorpho(MORPHO).withdrawCollateral(
+            marketParams,
+            assets,
+            apm,
+            sender
+        );
+
+        /// User credit is updated if any amount remains after debt repayment
+        /// The credit amount can be claimed later via `claim`
+        if (surplus > 0) {
+            IERC20(marketParams.loanToken).safeTransferFrom(
+                sender,
+                address(this),
+                surplus
+            );
+
+            credits[apm] = surplus;
+        }
+
+        emit ForceClosed(sender, apm, id, assets, surplus);
     }
 
     /**

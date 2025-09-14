@@ -13,6 +13,7 @@ import "contracts/protocol/OptimexProtocol.sol";
 
 import "contracts/MorphoManagement.sol";
 import "contracts/MorphoSupplier.sol";
+import "contracts/MorphoLiquidator.sol";
 import "./Utils.t.sol";
 
 contract BaseTest is Test, Utils {
@@ -33,6 +34,7 @@ contract BaseTest is Test, Utils {
     OptimexProtocol internal OPTIMEX_PROTOCOL;
     MorphoManagement internal MORPHO_MANAGEMENT;
     MorphoSupplier internal MORPHO_SUPPLIER;
+    MorphoLiquidator internal MORPHO_LIQUIDATOR;
 
     IMorpho internal MORPHO;
     address internal ORACLE;
@@ -69,6 +71,11 @@ contract BaseTest is Test, Utils {
             "ethereum:MorphoSupplier",
             "version 1"
         );
+        MORPHO_LIQUIDATOR = new MorphoLiquidator(
+            address(MORPHO_MANAGEMENT),
+            "ethereum:MorphoLiquidator",
+            "version 1"
+        );
 
         marketParams = MarketParams({
             loanToken: address(LOAN_TOKEN),
@@ -86,8 +93,16 @@ contract BaseTest is Test, Utils {
             address(VALIDATOR)
         );
         OPTIMEX_PROTOCOL.grantRole(
+            keccak256("MORPHO_LIQUIDATOR_ROLE"),
+            address(MORPHO_LIQUIDATOR)
+        );
+        OPTIMEX_PROTOCOL.grantRole(
             keccak256("OBTC_ALLOCATOR_ROLE"),
             address(MORPHO_SUPPLIER)
+        );
+        OPTIMEX_PROTOCOL.grantRole(
+            keccak256("OBTC_RECIPIENT_CONTROLLER_ROLE"),
+            address(MORPHO_LIQUIDATOR)
         );
         OPTIMEX_PROTOCOL.grantRole(
             keccak256("OBTC_RECIPIENT_CONTROLLER_ROLE"),

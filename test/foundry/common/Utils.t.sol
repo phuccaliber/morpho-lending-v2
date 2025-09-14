@@ -34,7 +34,7 @@ contract Utils is Test {
         );
 
     bytes32 private constant _FORCE_CLOSE_TYPEHASH =
-        0x642cae269805615f67beec8139560978a19ce4dce28618a5efd6e17f6d5fc78a;
+        keccak256("ForceClose(address apm,bytes32 tradeId)");
 
     bytes32 private constant _RESTRICT_POSITION_TYPEHASH =
         keccak256(
@@ -357,7 +357,6 @@ contract Utils is Test {
     }
 
     function _getForceCloseTypedDataHash(
-        bytes32 positionId,
         address positionManager,
         bytes32 tradeId,
         address liquidator
@@ -379,7 +378,6 @@ contract Utils is Test {
         bytes32 structHash = keccak256(
             abi.encode(
                 _FORCE_CLOSE_TYPEHASH,
-                positionId,
                 positionManager,
                 tradeId
             )
@@ -392,13 +390,11 @@ contract Utils is Test {
 
     function _signForceClose(
         uint256 privateKey,
-        bytes32 positionId,
         address positionManager,
         bytes32 tradeId,
         address liquidator
     ) internal view returns (bytes memory) {
         bytes32 digest = _getForceCloseTypedDataHash(
-            positionId,
             positionManager,
             tradeId,
             liquidator
