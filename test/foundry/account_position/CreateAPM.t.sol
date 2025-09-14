@@ -55,7 +55,8 @@ contract CreateAPMTest is BaseMainnetTest, BaseLocalTest {
         );
 
         assertEq(MORPHO_MANAGEMENT.apmValidators(apm), VALIDATOR);
-        assertEq(MORPHO_MANAGEMENT.apmAuthorizers(apm), authorizer);
+        (address _authorizer, ) = MORPHO_MANAGEMENT.marketAccess(apm);
+        assertEq(_authorizer, authorizer);
         assertEq(MORPHO.isAuthorized(apm, address(MORPHO_MANAGEMENT)), true);
     }
 

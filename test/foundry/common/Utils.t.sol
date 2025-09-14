@@ -20,12 +20,12 @@ contract Utils is Test {
 
     bytes32 private constant _BORROW_TYPEHASH =
         keccak256(
-            "Borrow(address apm,uint256 assets,address recipient,uint256 nonce,uint256 deadline)"
+            "Borrow(address apm,uint256 assets,address recipient,uint96 nonce,uint256 deadline)"
         );
 
     bytes32 private constant _WITHDRAW_COLLATERAL_TYPEHASH =
         keccak256(
-            "WithdrawCollateral(address apm,uint256 assets,uint256 nonce,uint256 deadline)"
+            "WithdrawCollateral(address apm,uint256 assets,uint96 nonce,uint256 deadline)"
         );
 
     bytes32 private constant _CLAIM_REFUND_TYPEHASH =
@@ -196,7 +196,7 @@ contract Utils is Test {
         address apm,
         uint256 assets,
         address receiver,
-        uint256 nonce,
+        uint96 nonce,
         uint256 deadline,
         address morphoManagement
     ) private view returns (bytes32) {
@@ -230,7 +230,7 @@ contract Utils is Test {
         address apm,
         uint256 assets,
         address receiver,
-        uint256 nonce,
+        uint96 nonce,
         uint256 deadline,
         address morphoManagement
     ) internal view returns (bytes memory) {
@@ -249,7 +249,7 @@ contract Utils is Test {
     function _getWithdrawCollateralTypedDataHash(
         address apm,
         uint256 assets,
-        uint256 nonce,
+        uint96 nonce,
         uint256 deadline,
         address morphoManagement
     ) private view returns (bytes32) {
@@ -286,7 +286,7 @@ contract Utils is Test {
         uint256 privateKey,
         address apm,
         uint256 assets,
-        uint256 nonce,
+        uint96 nonce,
         uint256 deadline,
         address morphoManagement
     ) internal view returns (bytes memory) {

@@ -88,6 +88,16 @@ interface IMorphoManagement {
     event OnMorphoRepay(uint256 repaidAssets, bytes data);
 
     /**
+        @notice Struct that stores information for a market action
+        @param authorizer The authorizer for the APM
+        @param actionCounter It is incremented when some authorized actions are performed for each position
+     */
+    struct MarketAccess {
+        address authorizer;
+        uint96 actionCounter;
+    }
+
+    /**
         @notice Supply collateral to an apm'position on Morpho
         @dev Called by anyone, but requires valid signature from the authorizer
         @dev The position can be supplied collateral if and only if:
@@ -189,6 +199,8 @@ interface IMorphoManagement {
         bytes32 role,
         address account
     ) external view returns (bool);
+
+    function marketAccess(address apm) external view returns (address authorizer, uint96 actionCounter);
 
     // /**
     //     @notice Checks the validity of the provided `apm`

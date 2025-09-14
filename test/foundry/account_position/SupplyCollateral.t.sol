@@ -56,7 +56,7 @@ contract SupplyCollateralTest is BaseMainnetTest, BaseLocalTest {
             address(APM)
         );
         assertEq(position.collateral, amount, "Collateral should be 1 BTC");
-        address authorizer = MORPHO_MANAGEMENT.apmAuthorizers(APM);
+        (address authorizer, ) = MORPHO_MANAGEMENT.marketAccess(APM);
         uint256 loanIndex = MORPHO_MANAGEMENT.loanCounters(APM);
         assertEq(
             MORPHO_MANAGEMENT.apmMarkets(APM),

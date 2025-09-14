@@ -44,26 +44,17 @@ contract MorphoManagement is
     /// @dev Tracks validator of each AccountPositionManager
     mapping(address => address) public apmValidators;
 
-    /// @dev Tracks authorizer of each AccountPositionManager
-    mapping(address => address) public apmAuthorizers;
-
     /// @dev Tracks the market of each apm
     /// Each APM is associated with a single market on Morpho
     mapping(address => bytes32) public apmMarkets;
-
-    /// @dev Mapping that stores the action counter for each apm
-    /// This counter is used as a nonce to prevent signature replay attacks
-    /// It is incremented when some authorized actions are performed for each position, including:
-    ///   - Borrow
-    ///   - Withdraw
-    ///   - Claim
-    mapping(address => uint256) public actionCounters;
 
     /// @dev Mapping that stores the loan counter for each position
     /// This counter is used as a nonce to prevent signature replay attacks, and
     /// tracks the number of loan supply requests
     /// It is incremented when `supply` is called for a new loan request
     mapping(address => uint256) public loanCounters;
+
+    mapping (address => MarketAccess) public marketAccess;
 
     /// @dev Mapping that stores credited amount for each apm
     /// This credit is set when a position is liquidated or force-closed
@@ -124,7 +115,7 @@ contract MorphoManagement is
         require(_isDelegator(signer), ErrorLib.InvalidDelegator(signer));
 
         apmValidators[apm] = validator;
-        apmAuthorizers[apm] = authorizer;
+        marketAccess[apm].authorizer = authorizer;
 
         /// Message to be signed by the apm, allows address(this) control the apm
         Authorization memory authorization = Authorization({
@@ -170,7 +161,7 @@ contract MorphoManagement is
         /// - Assets is greater than 0
         /// - marketParams is valid
         /// - The signature for supplying collateral is signed by the authorizer
-        address authorizer = apmAuthorizers[apm];
+        address authorizer = marketAccess[apm].authorizer;
         require(authorizer != address(0), ErrorLib.InvalidAPM());
         require(assets > 0, ErrorLib.ZeroAmount());
         bytes32 marketId = _validateMarketId(marketParams, apm);
@@ -218,18 +209,18 @@ contract MorphoManagement is
         bytes calldata signature
     ) external nonReentrant {
         bytes32 id = _validateMarketId(marketParams, apm);
-        address authorizer = apmAuthorizers[apm];
-        require(authorizer != address(0), ErrorLib.InvalidAPM());
+        MarketAccess memory access = marketAccess[apm];
+        require(access.authorizer != address(0), ErrorLib.InvalidAPM());
         require(block.timestamp <= deadline, ErrorLib.DeadlineExpired());
 
         /// Verify the authorizer has approved to borrow assets
         require(
             _verifyBorrowSig(
-                authorizer,
+                access.authorizer,
                 apm,
                 assets,
                 recipient,
-                actionCounters[apm],
+                access.actionCounter,
                 deadline,
                 signature
             ),
@@ -237,7 +228,7 @@ contract MorphoManagement is
         );
 
         /// Increment the action counter to prevent replay attacks
-        actionCounters[apm]++;
+        marketAccess[apm].actionCounter++;
 
         /// @dev Invokes Morpho to borrow assets from the market
         /// The assets will be sent directly to `recipient`
@@ -301,7 +292,8 @@ contract MorphoManagement is
     ) external nonReentrant {
         bytes32 id = _validateMarketId(marketParams, apm);
         require(block.timestamp <= deadline, ErrorLib.DeadlineExpired());
-        address authorizer = apmAuthorizers[apm];
+        MarketAccess memory access = marketAccess[apm];
+        address authorizer = access.authorizer;
         require(authorizer != address(0), ErrorLib.InvalidAPM());
 
         /// Verify the authorizer approves the withdrawal
@@ -310,7 +302,7 @@ contract MorphoManagement is
                 authorizer,
                 apm,
                 assets,
-                actionCounters[apm],
+                access.actionCounter,
                 deadline,
                 signature
             ),
@@ -318,7 +310,7 @@ contract MorphoManagement is
         );
 
         /// Increment the action counter to prevent replay attacks
-        actionCounters[apm]++;
+        marketAccess[apm].actionCounter++;
 
         /// @dev We only support full withdrawals, so the requested amount
         /// must match the total collateral balance.

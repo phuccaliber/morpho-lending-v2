@@ -20,14 +20,14 @@ contract MorphoManagementSigner is EIP712 {
         0x08ae5b019b96dfc6531fe4156aafc1cf288947578b56a9430efc623bbadc8e33;
 
     /// @notice EIP-712 typehash for the borrow operation
-    /// @dev keccak256("Borrow(address apm,uint256 assets,address recipient,uint256 nonce,uint256 deadline)");
+    /// @dev keccak256("Borrow(address apm,uint256 assets,address recipient,uint96 nonce,uint256 deadline)");
     bytes32 private constant _BORROW_TYPEHASH =
-        0xda4b426f381fd2bc183e218eed1c34a6dd86c29a586381f9a768a14889422ebb;
+        0xee89eb2d832b54ef2d13c4f58add9df5d83af50de3a9de193a9a52727f9f4db8;
 
     /// @notice EIP-712 typehash for the withdraw collateral operation
-    /// @dev keccak256("WithdrawCollateral(address apm,uint256 assets,uint256 nonce,uint256 deadline)");
+    /// @dev keccak256("WithdrawCollateral(address apm,uint256 assets,uint96 nonce,uint256 deadline)");
     bytes32 private constant _WITHDRAW_COLLATERAL_TYPEHASH =
-        0x0ab847d92cbc3ab01c5a721efd1585ef8baedd2dfd9a1292bf556ecf41432ad4;
+        0xd46b7a7b666e1f081fab75b7ce5e811ff844892501a5cd8fbea8a7478da3d2fe;
 
     /// @notice EIP-712 typehash for verifying the APM generation
     /// @dev keccak256("APMGenerated(address apm,uint256 deadline)")
@@ -120,7 +120,7 @@ contract MorphoManagementSigner is EIP712 {
         address apm,
         uint256 assets,
         address recipient,
-        uint256 nonce,
+        uint96 nonce,
         uint256 deadline,
         bytes memory signature
     ) internal view returns (bool isValid) {
@@ -154,7 +154,7 @@ contract MorphoManagementSigner is EIP712 {
         address signer,
         address apm,
         uint256 assets,
-        uint256 nonce,
+        uint96 nonce,
         uint256 deadline,
         bytes memory signature
     ) internal view returns (bool isValid) {
