@@ -52,7 +52,7 @@ contract BorrowTest is BaseMainnetTest, BaseLocalTest {
     function test_BorrowSuccess() public {
         uint256 assets = 50000e6;
         // Borrow 50_000 USDC
-        uint256 authorizerNonce = MORPHO_MANAGEMENT.actionCounters(APM);
+        (,uint96 authorizerNonce) = MORPHO_MANAGEMENT.marketAccess(APM);
 
         vm.prank(AUTHORIZER);
         bytes memory signature = _signBorrow(
@@ -89,9 +89,11 @@ contract BorrowTest is BaseMainnetTest, BaseLocalTest {
             position.borrowShares,
             "BORROWER should borrow all shares"
         );
+        
+        (, uint96 counter) = MORPHO_MANAGEMENT.marketAccess(APM);
 
         assertEq(
-            MORPHO_MANAGEMENT.actionCounters(APM),
+            counter,
             1,
             "Nonces should be 1"
         );
@@ -105,7 +107,7 @@ contract BorrowTest is BaseMainnetTest, BaseLocalTest {
     function test_BorrowFailureOverCollateral() public {
         uint256 assets = 110_000e6;
         // Borrow 50_000 USDC
-        uint256 authorizerNonce = MORPHO_MANAGEMENT.actionCounters(APM);
+        (, uint96 authorizerNonce) = MORPHO_MANAGEMENT.marketAccess(APM);
 
         vm.prank(AUTHORIZER);
         bytes memory signature = _signBorrow(
@@ -168,7 +170,7 @@ contract BorrowTest is BaseMainnetTest, BaseLocalTest {
     function test_BorrowFailureNotAuthorizer() public {
         uint256 assets = 50000e6;
         // Borrow 50_000 USDC
-        uint256 authorizerNonce = MORPHO_MANAGEMENT.actionCounters(APM);
+        (,uint96 authorizerNonce) = MORPHO_MANAGEMENT.marketAccess(APM);
 
         vm.prank(AUTHORIZER);
         uint256 AUTHORIZER2_PK = uint256(keccak256("AUTHORIZER_2"));

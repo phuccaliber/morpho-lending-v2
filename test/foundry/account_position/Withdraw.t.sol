@@ -56,7 +56,7 @@ contract WithdrawTest is BaseMainnetTest, BaseLocalTest {
         uint256 balanceBefore = BTC.balanceOf(address(BTC));
         vm.prank(AUTHORIZER);
         uint256 deadline = block.timestamp + 1000;
-        uint256 authorizerNonce = MORPHO_MANAGEMENT.actionCounters(APM);
+        (, uint96 authorizerNonce) = MORPHO_MANAGEMENT.marketAccess(APM);
         bytes memory signature = _signWithdraw(
             AUTHORIZER_PRIVATE_KEY,
             APM,
@@ -77,7 +77,7 @@ contract WithdrawTest is BaseMainnetTest, BaseLocalTest {
             balanceBefore + 1e8,
             "oBTC balance should increase by 1e8"
         );
-        uint256 authorizerNonce2 = MORPHO_MANAGEMENT.actionCounters(APM);
+        (, uint96 authorizerNonce2) = MORPHO_MANAGEMENT.marketAccess(APM);
         assertEq(
             authorizerNonce2,
             authorizerNonce + 1,
@@ -91,7 +91,7 @@ contract WithdrawTest is BaseMainnetTest, BaseLocalTest {
         uint256 assets = 1e8;
         vm.prank(BORROWER);
         uint256 deadline = block.timestamp + 1000;
-        uint256 authorizerNonce = MORPHO_MANAGEMENT.actionCounters(APM);
+        (, uint96 authorizerNonce) = MORPHO_MANAGEMENT.marketAccess(APM);
         bytes memory signature = _signWithdraw(
             BORROWER_PRIVATE_KEY,
             APM,
@@ -116,7 +116,7 @@ contract WithdrawTest is BaseMainnetTest, BaseLocalTest {
         uint256 assets = 1e8 - 1;
         vm.prank(BORROWER);
         uint256 deadline = block.timestamp + 1000;
-        uint256 authorizerNonce = MORPHO_MANAGEMENT.actionCounters(APM);
+        (, uint96 authorizerNonce) = MORPHO_MANAGEMENT.marketAccess(APM);
         bytes memory signature = _signWithdraw(
             AUTHORIZER_PRIVATE_KEY,
             APM,
@@ -141,7 +141,7 @@ contract WithdrawTest is BaseMainnetTest, BaseLocalTest {
         uint256 assets = 1e8 + 1;
         vm.prank(BORROWER);
         uint256 deadline = block.timestamp + 1000;
-        uint256 authorizerNonce = MORPHO_MANAGEMENT.actionCounters(APM);
+        (, uint96 authorizerNonce) = MORPHO_MANAGEMENT.marketAccess(APM);
         bytes memory signature = _signWithdraw(
             AUTHORIZER_PRIVATE_KEY,
             APM,
